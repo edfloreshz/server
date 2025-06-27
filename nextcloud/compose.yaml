@@ -26,6 +26,7 @@ services:
       - db
     volumes:
       - nextcloud:/var/www/html
+      - /media/eduardo/Storage/nextcloud:/storage
     environment:
       - MYSQL_PASSWORD=password
       - MYSQL_DATABASE=nextcloud
