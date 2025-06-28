@@ -1,7 +1,3 @@
-networks:
-  forgejo:
-    external: false
-
 volumes:
   forgejo_data:
     driver: local
@@ -9,7 +5,18 @@ volumes:
     driver: local
 
 services:
-  server:
+  db:
+    image: postgres:14
+    container_name: forgejo_db
+    restart: always
+    environment:
+      - POSTGRES_USER=forgejo
+      - POSTGRES_PASSWORD=forgejo
+      - POSTGRES_DB=forgejo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  forgejo:
     image: codeberg.org/forgejo/forgejo:11
     container_name: forgejo
     environment:
@@ -21,9 +28,8 @@ services:
       - FORGEJO__database__USER=forgejo
       - FORGEJO__database__PASSWD=forgejo
     restart: always
-    networks:
-      - forgejo
     volumes:
+      - ./app.ini:/etc/forgejo/app.ini
       - forgejo_data:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
@@ -32,15 +38,15 @@ services:
       - "222:22"
     depends_on:
       - db
-  db:
-    image: postgres:14
-    container_name: forgejo_db
-    restart: always
+
+  forgejo-runner:
+    image: code.forgejo.org/forgejo/runner:6.0.0
+    container_name: runner
     environment:
-      - POSTGRES_USER=forgejo
-      - POSTGRES_PASSWORD=forgejo
-      - POSTGRES_DB=forgejo
-    networks:
-      - forgejo
+      DOCKER_HOST: unix:///var/run/docker.sock
+    user: 0:0
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    command: forgejo-runner -c config.yml daemon
